@@ -6,8 +6,8 @@ check_memory <- function(){
       
       # Since this information has been provided in advance,
       # I choose to not perform any extra work to guess them
-      number.of.rows <- 2075259
-      number.of.cols <- 9
+      number.of.rows <- 1300000
+      number.of.cols <- 28
       bytes.per.cell <- 8
       
       data.size.bytes <- number.of.rows * number.of.cols * bytes.per.cell
