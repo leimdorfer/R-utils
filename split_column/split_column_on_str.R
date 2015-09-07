@@ -59,6 +59,7 @@ split_col <- function(yourdata, col_to_split, splittr, filename, newcol1, newcol
       result <- cbind(result,data_in) # combine data_in with new df
 
       #View(result)
+      print(result)
       
       write.csv(result, filename)
   

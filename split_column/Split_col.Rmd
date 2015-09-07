@@ -5,20 +5,173 @@ date: "4 September 2015"
 output: html_document
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This R utility splits a column into two on a given separator. 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+##User Story
+
+**As a journalist** with a dataset that has a column of data with two values combined in a string,  
+**I want** to separate those two values into separate columns, 
+**so that** I can work with tidy data.
+
+Here is one example:
+
+
+```{r echo=FALSE}
+
+a = c("Jack is dad", "Jill is mum", "Hansel is son", "Gretel is daughter")
+b = c("Apples", "Pears", "Chocolate", "Sweets") 
+
+df <- data.frame(a,b)
+names(df)<- c("People", "Favourite Food")
+
+print(df)
+
+```
+
+
+The following utility assumes that: 
+
+ * you have one column that you want to change like the "People" column above
+ * you have a part of the string that you can identify as a "splitter"
+ * you want a new dataset created with a different name with the data separated in two columns
+ * You have the "stringr" package installed in R (*install.packages("stringr")*)
+ 
+ You may also have decided on a new name for the two new columns (in this case "name" and "relation" might be an option). Also, you might have a name for the new dataset, although the utility will come up with some names for you as a default.
+ 
+## Using the utility
+ 
+1. Make sure the R file "split\_column\_on\_str.R" is in the same directory as your data.csv file
+2. Load the split\_column\_on\_str.R 
 
 ```{r}
+source("split_column_on_str.R")
+```
 
-summary(cars)
+Then call the "split_col()" function passing in the following arguments:
+
+*[YOUR DATA FILE],[THE COLUMN YOU WANT TO SPLIT], [THE SEPARATOR]
+
+[THE NEW DATA FILENAME], [NEW COLUMN NAME 1], [NEW COLUMN NAME 2]*
+
+(The last 3 are optional. Mistakes in the first 3 will cause errors)
+
+
+```{r message=FALSE}
+split_col("family.csv","People", "is","family_new.csv", "name","relation")
+```
+
+That's it! You should now have a file in the same directory with the data tidies as above.
+
+
+***
+
+## How it works
+
+First we load the stringr library
+
+```{r message=FALSE, eval=FALSE}
+
+library(stringr)
 
 ```
 
-You can also embed plots, for example:
+Then we create the split_col() function and set defaults for the filename and new columns if they weren't supplied.
 
-```{r, echo=FALSE}
-plot(cars)
+```{r eval=FALSE}
+
+split_col <- function(yourdata, col_to_split, splittr, filename, newcol1, newcol2){
+      
+      #First we do some checks and set defaults
+  
+      if(missing(filename)) {
+            filename <- paste0("new_", yourdata)
+      }
+      if(missing(newcol1)) {
+            newcol1 <- paste0(col_to_split, "1")
+      }
+      if(missing(newcol2)) {
+            newcol2 <- paste0(col_to_split, "2")
+      }
+
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Next we check that the data file exists. If it does we read it in to "data_in".
+
+```{r eval=FALSE}
+      if (!file.exists(yourdata)) {
+            
+            print("ERROR: Data file not found. Remember to include the .csv")
+            break
+      } else {
+            
+            data_in<-read.csv(yourdata,header=TRUE)
+      }
+```
+
+Then we look for the index of the column name provided to the function that we are going to splt on. 
+
+If the index is 0 it means the argument identifying the column is wrong.
+
+```{r eval=FALSE}
+      colidx <- which(colnames(data_in)==col_to_split) 
+      
+      if(length(colidx)<1){
+            print("ERROR: Column not found. Remember they are case-sensitive.")
+            break
+      }
+
+```
+
+
+Now we create a new dataframe of just the column we want to split (d) and pass this along with the str we are using as the "splitter" to the "do\_the\_splits()" function.
+
+```{r eval=FALSE}
+      d <- as.data.frame(data_in[,colidx])
+      s <- splittr
+      
+      tdf <- apply(d, 1, do_the_splits, s)
+```
+
+"do\_the\_splits()" returns a matrix of dataframes as we get a df for each row (ahaaaaaa!!!), so we need to cast result back to a dataframe but first we transpose the matrix.
+
+```{r eval=FALSE}
+      result <- as.data.frame(t(tdf))
+```
+
+
+Finally, we give the new dataframe's columns their names, remove the old unwanted column and cbind the new separated columns to the data from the original dataset.
+
+```{r eval=FALSE}      
+      names(result) <- c(newcol1,newcol2)
+      
+      data_in[,colidx]<-NULL
+      
+      result <- cbind(result,data_in) 
+
+      print(result)
+      
+      write.csv(result, filename)
+}
+```
+
+"do\_the\_splits()" which does the work on each row of data\_in checks for the splitter in the string and, if it exists, uses str\_split\_fixed (from stringr) to create 2 columns:
+
+```{r eval=FALSE}
+do_the_splits <- function(d,s) {
+      
+      if(!grep(s, d)){
+            
+            print("ERROR: Splitter not found in one or more columns. Please check the data.")
+            break            
+      }else{
+            
+            str_split_fixed(d, s, 2)
+      }
+}
+```
+
+That's it.
+
+All suggestions welcome. The code lives here: 
